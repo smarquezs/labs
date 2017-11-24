@@ -1,0 +1,38 @@
+version: '2'
+services:
+  labs-db:
+    image: postgres:9.5.3
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_USER=labs
+      - POSTGRES_DB=labs_development
+    volumes_from:
+      - labs-data
+  labs-data:
+    image: postgres:9.5.3
+    volumes:
+      - /var/lib/postgresql
+    command: "true"
+  labs-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.development
+    depends_on:
+      - labs-db
+    environment:
+      - PASSENGER_APP_ENV=development
+    command: ["./wait-for-postgres.sh", "labs-db", "bin/rails", "db:migrate"]
+  labs:
+    build:
+      context: .
+      dockerfile: Dockerfile.development
+    depends_on:
+      - labs-db
+      - labs-migrate
+    environment:
+      - PASSENGER_APP_ENV=development
+      - RAILS_LOG_TO_STDOUT=true
+      - VIRTUAL_HOST=labs.dev.archdaily.com
+      - VIRTUAL_PORT=80
+    volumes:
+      - .:/home/app/webapp
